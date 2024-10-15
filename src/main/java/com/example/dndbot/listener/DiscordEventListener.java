@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -12,12 +13,16 @@ import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Random;
 
 public class DiscordEventListener extends ListenerAdapter {
@@ -41,8 +46,13 @@ public class DiscordEventListener extends ListenerAdapter {
                                     .addChoices(choiceArray))
                             .addOptions(new OptionData(OptionType.INTEGER, "modifier", "Add an additional modifier to your roll", false)),
                     Commands.slash("addchar", "Add a character")
-                            .addOptions(new OptionData(OptionType.STRING, "name", "Name your character", true))
-            ).queue();
+                            .addOptions(new OptionData(OptionType.STRING, "name", "Name your character", true)),
+                    Commands.slash("modstat", "Modify a stat")
+                                    .addOptions(new OptionData(OptionType.STRING, "stat", "Stat to modify", true)
+                                            .addChoices(choiceArray))
+                            .addOptions(new OptionData(OptionType.INTEGER, "amount", "New stat value", true)),
+                    Commands.slash("delchar", "Delete your character permanently."))
+                    .queue();
             System.out.println("Commands reg");
             // All slash commands must be added here. They follow a strict set of rules and are not as flexible as text commands.
             // Since we only need a simple command, we will only use a slash command without any arguments.
@@ -79,8 +89,12 @@ public class DiscordEventListener extends ListenerAdapter {
         }
         if (event.getName().equals("addchar")) {
             Long userId = event.getUser().getIdLong();
+            if(characters.get(userId) != null){
+                event.reply("Character already exists. Please delete if you'd like to create a new character.").queue();
+                return;
+            }
             String charName = event.getOption("name").getAsString();
-            Dictionary<String, Integer> stats = new Hashtable<>();
+            Map<String, Integer> stats = new Hashtable<>();
             for (Command.Choice choice : choiceArray) {
                 stats.put(choice.getName(), 0);
             }
@@ -90,6 +104,49 @@ public class DiscordEventListener extends ListenerAdapter {
             System.out.println(charNames.get(userId));
 
             event.reply("Character " + charName + " added!").queue();
+        }
+
+        if (event.getName().equals("modstat")){
+            Long userId = event.getUser().getIdLong();
+            if(characters.get(userId) == null){
+                event.reply("You must add a character first!").queue();
+                return;
+            }
+            String stat = event.getOption("stat").getAsString();
+            int oldStat = characters.get(userId).get(stat);
+            int newStat = event.getOption("amount").getAsInt();
+            characters.get(userId).put(stat, newStat);
+            event.reply(stat + " changed from " + oldStat + " → " + newStat + ".").queue();
+        }
+
+        if (event.getName().equals("delchar")){
+            Long userId = event.getUser().getIdLong();
+            if(characters.get(userId) == null){
+                event.reply("You do not currently have a character.").queue();
+                return;
+            }
+            event.reply("Are you sure you want to delete " + charNames.get(userId) + "?")
+                    .addActionRow(
+                            Button.danger("ydelete", "Yes"),
+                            Button.secondary("ndelete", "No"))
+                    .queue();
+
+        }
+    }
+
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event) {
+        if(event.getComponentId().equals("ydelete")){
+            Long userId = event.getUser().getIdLong();
+            characters.remove(userId);
+            charNames.remove(userId);
+
+            event.editMessage("Character has been deleted.").setActionRow(Button.danger("ydelete", "Yes").asDisabled(), Button.secondary("ndeles", "No").asDisabled())
+
+                    .queue();
+        }
+        if(event.getComponentId().equals("ndelete")){
+            event.editMessage("Character has not been deleted.").queue();
         }
     }
 
@@ -106,8 +163,8 @@ public class DiscordEventListener extends ListenerAdapter {
             new Command.Choice("stealth", "stealth")
     };
 
-    protected Dictionary<Long, Dictionary<String, Integer>> characters = new Hashtable<>();
-    protected Dictionary<Long, String> charNames = new Hashtable<>();
+    protected Map<Long, Map<String, Integer>> characters = new Hashtable<>();
+    protected Map<Long, String> charNames = new Hashtable<>();
     protected String[] npcs = {};
     protected Random rand = new Random();
 }
