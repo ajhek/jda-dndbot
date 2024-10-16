@@ -1,6 +1,9 @@
 package com.example.dndbot;
 
+import com.example.dndbot.database.dbAccess;
 import org.apache.commons.cli.*;
+
+import java.sql.SQLException;
 
 public class Main {
     public static void main(String[] args) {
@@ -31,10 +34,14 @@ public class Main {
 
             // If it passes through everything, it starts the bot and sends the token to our second class.
             DnDBot.selfBot = new DnDBot(token);
+            dbAccess db = new dbAccess();
+            db.connect();
         } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("", options);
             System.exit(0);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
