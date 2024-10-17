@@ -1,6 +1,8 @@
 package com.example.dndbot.database;
 
 import java.sql.*;
+import java.util.Hashtable;
+import java.util.Map;
 
 public class dbAccess {
     private Connection db;
@@ -9,33 +11,60 @@ public class dbAccess {
         db = DriverManager.getConnection("jdbc:sqlite:charInfo.db");
     }
 
-    public void connect() {
-        // NOTE: Connection and Statement are AutoCloseable.
-        //       Don't forget to close them both in order to avoid leaks.
-        try
-                (
-                        // create a database connection
-                        Statement statement = db.createStatement();
-                )
-        {
-            statement.setQueryTimeout(30);  // set timeout to 30 sec.
-
-            statement.executeUpdate("drop table if exists person");
-            statement.executeUpdate("create table person (id integer, name string)");
-            statement.executeUpdate("insert into person values(1, 'leo')");
-            statement.executeUpdate("insert into person values(2, 'yui')");
-            ResultSet rs = statement.executeQuery("select * from person");
-            while(rs.next())
-            {
-                // read the result set
-                System.out.println("name = " + rs.getString("name"));
-                System.out.println("id = " + rs.getInt("id"));
+    public Integer retrieveStat(Long id, String stat) throws SQLException {
+        try(Statement s = db.createStatement();) {
+            s.setQueryTimeout(30);
+            ResultSet rs = s.executeQuery("select " + id + ", " + stat + " from characters");
+            if (rs.next()) {
+                return rs.getInt(stat);
+            } else {
+                return 0;
             }
+        } catch(SQLException e){
+            e.printStackTrace(System.err);
+            return 0;
         }
-        catch(SQLException e)
-        {
-            // if the error message is "out of memory",
-            // it probably means no database file is found
+    }
+
+    public String retrieveName(Long id) throws SQLException {
+        try(Statement s = db.createStatement();) {
+            s.setQueryTimeout(30);
+            ResultSet rs = s.executeQuery("select " + id + ", name from characters");
+            if (rs.next()) {
+                return rs.getString("name");
+            } else {
+                return "null";
+            }
+        } catch(SQLException e){
+            e.printStackTrace(System.err);
+            return "null";
+        }
+    }
+
+    public void insert(Long id, String name, Map<String, Integer> stats) throws SQLException {
+        try(Statement s = db.createStatement();) {
+            s.setQueryTimeout(30);
+            s.executeUpdate("insert into characters values(" + id + "," + name + "," + stats.get("ranged") + "," + stats.get("melee") + "," + stats.get("cqc") + "," + stats.get("dodge") + ","
+                    + stats.get("block") + "," + stats.get("throwables") + "," + stats.get("perception") + "," + stats.get("bigbrain") + "," + stats.get("speech") + "," + stats.get("stealth") + ",");
+        } catch(SQLException e){
+            e.printStackTrace(System.err);
+        }
+    }
+
+    public void updateStat(Long id, String stat, Integer newStat){
+        try(Statement s = db.createStatement();){
+            s.setQueryTimeout(30);
+            s.executeUpdate("update characters set "+stat+" = "+newStat+" where id = "+id);
+        } catch(SQLException e){
+            e.printStackTrace(System.err);
+        }
+    }
+
+    public void deleteChar(Long id) throws SQLException {
+        try(Statement s = db.createStatement();){
+            s.setQueryTimeout(30);
+            s.executeUpdate("delete from characters where id="+id);
+        } catch(SQLException e){
             e.printStackTrace(System.err);
         }
     }

@@ -1,5 +1,6 @@
 package com.example.dndbot.listener;
 
+import com.example.dndbot.database.dbAccess;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
@@ -20,15 +21,15 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Random;
+import java.sql.SQLException;
+import java.util.*;
 
 public class DiscordEventListener extends ListenerAdapter {
     public DnDBot bot;
-    public DiscordEventListener(DnDBot bot) {
+    private dbAccess db;
+    public DiscordEventListener(DnDBot bot) throws SQLException {
         this.bot = bot;
+        db = new dbAccess();
     }
 
     public void onReady(@NotNull ReadyEvent event) {
@@ -69,68 +70,86 @@ public class DiscordEventListener extends ListenerAdapter {
         }
         if (event.getName().equals("roll")) {
             Long userId = event.getUser().getIdLong();
-            if(characters.get(userId) == null){
-                event.reply("You must add a character first!").queue();
-                return;
+            try {
+                String charName = db.retrieveName(userId);
+                if(Objects.equals(charName, "null")){
+                    event.reply("You must add a character first!").queue();
+                    return;
+                }
+                String action = event.getOption("action").getAsString();
+                Integer bonus = db.retrieveStat(userId, action);
+                Integer roll = rand.nextInt(100) + 1;
+                String rollmsg;
+                if (event.getOption("modifier") == null){
+                    rollmsg = (charName + " rolls " + action + ".\n` " + (roll+bonus) + "` ⟵ [**" + roll + "**] d100 + " + bonus);
+                }
+                else{
+                    int modifier = event.getOption("modifier").getAsInt();
+                    rollmsg = (charName + " rolls " + action + ".\n` " + (roll+bonus+modifier) + "` ⟵ [**" + roll + "**] d100 + " + bonus + " + " + modifier);
+                }
+                event.reply(rollmsg).queue();
+            } catch (SQLException e) {
+                event.reply("Failed to retrieve character data.").queue();
+                throw new RuntimeException(e);
             }
-            String action = event.getOption("action").getAsString();
-            String charName = charNames.get(userId);
-            Integer bonus = (characters.get(userId)).get(action);
-            Integer roll = rand.nextInt(100) + 1;
-            String rollmsg;
-            if (event.getOption("modifier") == null){
-                rollmsg = (charName + " rolls " + action + ".\n` " + (roll+bonus) + "` ⟵ [**" + roll + "**] d100 + " + bonus);
-            }
-            else{
-                int modifier = event.getOption("modifier").getAsInt();
-                rollmsg = (charName + " rolls " + action + ".\n` " + (roll+bonus+modifier) + "` ⟵ [**" + roll + "**] d100 + " + bonus + " + " + modifier);
-            }
-            event.reply(rollmsg).queue();
+
         }
         if (event.getName().equals("addchar")) {
             Long userId = event.getUser().getIdLong();
-            if(characters.get(userId) != null){
-                event.reply("Character already exists. Please delete if you'd like to create a new character.").queue();
-                return;
-            }
-            String charName = event.getOption("name").getAsString();
-            Map<String, Integer> stats = new Hashtable<>();
-            for (Command.Choice choice : choiceArray) {
-                stats.put(choice.getName(), 0);
-            }
-            characters.put(userId, stats);
-            charNames.put(userId, charName);
-            System.out.println(characters.get(userId));
-            System.out.println(charNames.get(userId));
+            try {
+                if(!Objects.equals(db.retrieveName(userId), "null")){
+                    event.reply("Character already exists. Please delete if you'd like to create a new character.").queue();
+                    return;
+                }
+                String charName = event.getOption("name").getAsString();
+                Map<String, Integer> stats = new Hashtable<>();
+                for (Command.Choice choice : choiceArray) {
+                    stats.put(choice.getName(), 0);
+                }
+                db.insert(userId, charName, stats);
 
-            event.reply("Character " + charName + " added!").queue();
+                event.reply("Character " + charName + " added!").queue();
+            } catch (SQLException e) {
+                event.reply("Failed to add character").queue();
+                throw new RuntimeException(e);
+            }
+
         }
 
         if (event.getName().equals("modstat")){
             Long userId = event.getUser().getIdLong();
-            if(characters.get(userId) == null){
-                event.reply("You must add a character first!").queue();
-                return;
+            try {
+                if(Objects.equals(db.retrieveName(userId), "null")){
+                    event.reply("You must add a character first!").queue();
+                    return;
+                }
+                String stat = event.getOption("stat").getAsString();
+                int oldStat = db.retrieveStat(userId, stat);
+                int newStat = event.getOption("amount").getAsInt();
+                db.updateStat(userId, stat, newStat);
+                event.reply(stat + " changed from " + oldStat + " → " + newStat + ".").queue();
+            } catch (SQLException e) {
+                event.reply("Failed to update stat").queue();
+                throw new RuntimeException(e);
             }
-            String stat = event.getOption("stat").getAsString();
-            int oldStat = characters.get(userId).get(stat);
-            int newStat = event.getOption("amount").getAsInt();
-            characters.get(userId).put(stat, newStat);
-            event.reply(stat + " changed from " + oldStat + " → " + newStat + ".").queue();
         }
 
         if (event.getName().equals("delchar")){
             Long userId = event.getUser().getIdLong();
-            if(characters.get(userId) == null){
-                event.reply("You do not currently have a character.").queue();
-                return;
+            try {
+                if(Objects.equals(db.retrieveName(userId), "null")){
+                    event.reply("You do not currently have a character.").queue();
+                    return;
+                }
+                event.reply("Are you sure you want to delete " + db.retrieveName(userId) + "?")
+                        .addActionRow(
+                                Button.danger("ydelete", "Yes"),
+                                Button.secondary("ndelete", "No"))
+                        .queue();
+            } catch (SQLException e) {
+                event.reply("Error with database").queue();
+                throw new RuntimeException(e);
             }
-            event.reply("Are you sure you want to delete " + charNames.get(userId) + "?")
-                    .addActionRow(
-                            Button.danger("ydelete", "Yes"),
-                            Button.secondary("ndelete", "No"))
-                    .queue();
-
         }
     }
 
@@ -138,15 +157,19 @@ public class DiscordEventListener extends ListenerAdapter {
     public void onButtonInteraction(ButtonInteractionEvent event) {
         if(event.getComponentId().equals("ydelete")){
             Long userId = event.getUser().getIdLong();
-            characters.remove(userId);
-            charNames.remove(userId);
-
-            event.editMessage("Character has been deleted.").setActionRow(Button.danger("ydelete", "Yes").asDisabled(), Button.secondary("ndeles", "No").asDisabled())
-
-                    .queue();
+            try {
+                db.deleteChar(userId);
+                event.editMessage("Character has been deleted.").setActionRow(Button.danger("ydelete", "Yes").asDisabled(), Button.secondary("ndelete", "No").asDisabled())
+                        .queue();
+            } catch (SQLException e) {
+                event.editMessage("Error deleting character.").setActionRow(Button.danger("ydelete", "Yes").asDisabled(), Button.secondary("ndelete", "No").asDisabled())
+                        .queue();
+                throw new RuntimeException(e);
+            }
         }
         if(event.getComponentId().equals("ndelete")){
-            event.editMessage("Character has not been deleted.").queue();
+            event.editMessage("Character has not been deleted.").setActionRow(Button.danger("ydelete", "Yes").asDisabled(), Button.secondary("ndelete", "No").asDisabled())
+                    .queue();
         }
     }
 

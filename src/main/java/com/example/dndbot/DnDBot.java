@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.sharding.ShardManager;
 
 
 import javax.security.auth.login.LoginException;
+import java.sql.SQLException;
 
 public class DnDBot extends ListenerAdapter{
     protected static DnDBot selfBot;
@@ -17,13 +18,13 @@ public class DnDBot extends ListenerAdapter{
     public DnDBot(String token) {
         try {
             shardManager = buildShardManager(token);
-        } catch (LoginException e) {
+        } catch (LoginException | SQLException e) {
             System.out.println("Failed to start bot! Please check the console for any errors.");
             System.exit(0);
         }
     }
 
-    private ShardManager buildShardManager(String token) throws LoginException{
+    private ShardManager buildShardManager(String token) throws LoginException, SQLException {
         DefaultShardManagerBuilder builder = DefaultShardManagerBuilder.createLight(token)
                 .addEventListeners(new DiscordEventListener(this));
         return builder.build();
