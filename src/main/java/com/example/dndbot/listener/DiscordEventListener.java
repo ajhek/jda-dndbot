@@ -31,8 +31,9 @@ public class DiscordEventListener extends ListenerAdapter {
         registerCommands(bot.getShardManager());
     }
 
+    // Registers command information (currently registers to guild due to speed)
     private void registerCommands(ShardManager jda) {
-        Guild g = jda.getGuildById("838473776869015653"); // Replace this with the ID of your own server.
+        Guild g = jda.getGuildById("838473776869015653");
         if (g != null) {
             CommandListUpdateAction commands = g.updateCommands();
             commands.addCommands(
@@ -50,19 +51,20 @@ public class DiscordEventListener extends ListenerAdapter {
                     Commands.slash("delchar", "Delete your character permanently."))
                     .queue();
             System.out.println("Commands reg");
-            // All slash commands must be added here. They follow a strict set of rules and are not as flexible as text commands.
-            // Since we only need a simple command, we will only use a slash command without any arguments.
         }
     }
 
+    // Slash command handlers
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         System.out.println("Command caught");
-        if (event.getName().equals("hello")) { // Is the command name "hello"?
-            event.reply("Hello " + event.getUser().getAsMention() + "!") // What will we reply with?
-                    .setEphemeral(true) // Do we want the message hidden so only the user who ran the command can see it?
-                    .queue(); // Queue the reply.
+        // Test command
+        if (event.getName().equals("hello")) {
+            event.reply("You're going to die.")
+                    .setEphemeral(true)
+                    .queue();
         }
+        // Command to perform a roll. Takes the stat from command options alongside any additional modifiers, then retrieves it from the database.
         if (event.getName().equals("roll")) {
             Long userId = event.getUser().getIdLong();
             try {
@@ -89,6 +91,8 @@ public class DiscordEventListener extends ListenerAdapter {
             }
 
         }
+
+        // Adds a new character under users discord ID, with zero in all stats
         if (event.getName().equals("addchar")) {
             Long userId = event.getUser().getIdLong();
             try {
@@ -111,6 +115,7 @@ public class DiscordEventListener extends ListenerAdapter {
 
         }
 
+        // Allows user to modify a single stat of their character
         if (event.getName().equals("modstat")){
             Long userId = event.getUser().getIdLong();
             try {
@@ -128,7 +133,7 @@ public class DiscordEventListener extends ListenerAdapter {
                 throw new RuntimeException(e);
             }
         }
-
+        // Gives user option to delete their character through button input.
         if (event.getName().equals("delchar")){
             Long userId = event.getUser().getIdLong();
             try {
@@ -148,8 +153,10 @@ public class DiscordEventListener extends ListenerAdapter {
         }
     }
 
+    // Button event handlers
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
+        // Handles deleting characters
         if(event.getComponentId().equals("ydelete")){
             Long userId = event.getUser().getIdLong();
             try {
@@ -168,6 +175,7 @@ public class DiscordEventListener extends ListenerAdapter {
         }
     }
 
+    // List of stats, used for generating roll command options and character creation.
     private static final Command.Choice[] choiceArray = {
             new Command.Choice("ranged", "ranged"),
             new Command.Choice("melee", "melee"),

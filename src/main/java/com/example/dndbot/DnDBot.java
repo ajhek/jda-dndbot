@@ -21,6 +21,7 @@ public class DnDBot extends ListenerAdapter{
         }
     }
 
+    // Builds the bot and adds event listeners.
     private ShardManager buildShardManager(String token) throws LoginException, SQLException {
         DefaultShardManagerBuilder builder = DefaultShardManagerBuilder.createLight(token)
                 .addEventListeners(new DiscordEventListener(this));

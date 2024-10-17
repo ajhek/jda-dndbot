@@ -11,7 +11,7 @@ public class Main {
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
-
+        // Lets the bot be run from the command line with ones own token, using option -t
         try {
             CommandLine cmd = parser.parse(options, args);
 
