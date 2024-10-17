@@ -2,11 +2,8 @@ package com.example.dndbot.listener;
 
 import com.example.dndbot.database.dbAccess;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import com.example.dndbot.DnDBot;
@@ -19,14 +16,12 @@ import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import org.jetbrains.annotations.NotNull;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
 public class DiscordEventListener extends ListenerAdapter {
     public DnDBot bot;
-    private dbAccess db;
+    private final dbAccess db;
     public DiscordEventListener(DnDBot bot) throws SQLException {
         this.bot = bot;
         db = new dbAccess();
@@ -186,8 +181,5 @@ public class DiscordEventListener extends ListenerAdapter {
             new Command.Choice("stealth", "stealth")
     };
 
-    protected Map<Long, Map<String, Integer>> characters = new Hashtable<>();
-    protected Map<Long, String> charNames = new Hashtable<>();
-    protected String[] npcs = {};
-    protected Random rand = new Random();
+    private final Random rand = new Random();
 }
