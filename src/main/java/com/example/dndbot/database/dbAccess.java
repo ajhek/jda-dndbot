@@ -44,7 +44,7 @@ public class dbAccess {
         try(Statement s = db.createStatement()) {
             s.setQueryTimeout(30);
             s.executeUpdate("insert into characters values(" + id + "," + name + "," + stats.get("ranged") + "," + stats.get("melee") + "," + stats.get("cqc") + "," + stats.get("dodge") + ","
-                    + stats.get("block") + "," + stats.get("throwables") + "," + stats.get("perception") + "," + stats.get("bigbrain") + "," + stats.get("speech") + "," + stats.get("stealth") + ",");
+                    + stats.get("block") + "," + stats.get("throwables") + "," + stats.get("perception") + "," + stats.get("bigbrain") + "," + stats.get("speech") + "," + stats.get("stealth") + "," + stats.get("technical"));
         } catch(SQLException e){
             e.printStackTrace(System.err);
         }

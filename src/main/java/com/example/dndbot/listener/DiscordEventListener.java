@@ -178,7 +178,8 @@ public class DiscordEventListener extends ListenerAdapter {
             new Command.Choice("perception", "perception"),
             new Command.Choice("bigbrain", "bigbrain"),
             new Command.Choice("speech", "speech"),
-            new Command.Choice("stealth", "stealth")
+            new Command.Choice("stealth", "stealth"),
+            new Command.Choice("technical", "technical")
     };
 
     private final Random rand = new Random();
